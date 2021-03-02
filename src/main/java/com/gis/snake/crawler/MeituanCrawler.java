@@ -17,6 +17,7 @@ import org.apache.http.util.EntityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.io.IOException;
@@ -24,6 +25,7 @@ import java.net.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -67,13 +69,13 @@ public class MeituanCrawler {
             try {
                 Thread.sleep(getRandom(1000, 3000)); //1秒10条
                 // sortType = 0 是按照时间倒序
-                url = "https://www.meituan.com/ptapi/poi/getcomment?id=" + meituanId + "&offset=" + offset + "&pageSize=10&mode=0&sortType=0";
+                url = "https://www.meituan.com/ptapi/poi/getcomment?id=" + meituanId + "&offset=" + offset + "&pageSize=50&mode=0&sortType=0";
                 //构造httpClient和httpGet对象
                 httpGet = new HttpGet(url);
                 //设置ip代理
                 httpGet.setConfig(requestConfig);
                 //请求头设置
-                httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.132 Safari/537.36");
+                httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36");
                 //发起请求
                 response = httpClient.execute(httpGet);
                 //获取返回结果
@@ -87,8 +89,19 @@ public class MeituanCrawler {
                         System.out.println("爬虫结束");
                         break;
                     }
+                    String commentTime2 = comments.getJSONObject(0).getString("commentTime");
+                    DateFormat dateFormat2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                    Date startDate = dateFormat2.parse("2019-01-01 00:00:00");
+                    Date commentTime1 = new Date(Long.parseLong(commentTime2));
+                    if(commentTime1.before(startDate)){
+                        System.out.println("当前评论在2019年之前不处理");
+                        offset += 100;
+                        continue;
+                    }
                     for (int i = 0; i < comments.size(); i++) { //解析评论
                         try {
+
+                            String commentTime = timeStamp2Date(comments.getJSONObject(i).getString("commentTime"));
                             TbScenicReviewInfo tbScenicReviewInfo = new TbScenicReviewInfo();
                             //评论id
                             tbScenicReviewInfo.setReviewId(comments.getJSONObject(i).getString("reviewId"));
@@ -105,13 +118,19 @@ public class MeituanCrawler {
                             //评论来源
                             tbScenicReviewInfo.setSrcName("美团网");
                             //评论时间
-                            tbScenicReviewInfo.setTime(timeStamp2Date(comments.getJSONObject(i).getString("commentTime")));
+                            tbScenicReviewInfo.setTime(commentTime);
                             //景区id
                             tbScenicReviewInfo.setSid(meituanId);
+                            System.out.println(JSON.toJSON(tbScenicReviewInfo));
+                            if(StringUtils.isEmpty(StringUtils.trimAllWhitespace(tbScenicReviewInfo.getReview()))){
+                                System.out.println("评论为空,不在入库");
+                                continue;
+                            }
                             boolean first = true;
                             try {
                                 count++;
                                 System.out.println("写入数据库" + tbScenicReviewInfo.getReviewId());
+
                                 mapMapper.insertScenicReviewInfo(tbScenicReviewInfo);
                             } catch (Exception e) {
                                 System.out.println("写入数据库异常");
@@ -137,9 +156,9 @@ public class MeituanCrawler {
                     continue;
                 }
                 //偏移量递增10
-                offset += 10;
+                offset += 50;
             } catch (Exception e) {
-                //e.printStackTrace();
+                e.printStackTrace();
                 System.out.println("get访问异常");
                 System.out.println("重新校验ip,切换ip");
                 requestConfig = resetRequestConfig();
@@ -187,7 +206,7 @@ public class MeituanCrawler {
         try {
             while (true) {
                 Thread.sleep(1000 * 5); //休眠5秒
-                url = "https://www.meituan.com/ptapi/poi/getcomment?id=" + meituanId + "&offset=" + offset + "&pageSize=10&mode=0&sortType=1";
+                url = "https://www.meituan.com/ptapi/poi/getcomment?id=" + meituanId + "&offset=" + offset + "&pageSize=10&mode=0&sortType=0";
                 //构造httpClient和httpGet对象
                 httpGet = new HttpGet(url);
                 //请求头设置

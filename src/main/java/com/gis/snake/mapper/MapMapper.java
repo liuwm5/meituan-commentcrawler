@@ -9,10 +9,10 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface MapMapper {
 
-    @Insert("insert into tb_scenic_review_info values(#{reviewId},#{author},#{authorProfileUrl},#{picInfo},#{review},#{score},#{srcName},#{time},#{sid})")
+    @Insert("insert into tb_scenic_review_info_final values(#{reviewId},#{author},#{authorProfileUrl},#{picInfo},#{review},#{score},#{srcName},#{time},#{sid})")
     Integer insertScenicReviewInfo(TbScenicReviewInfo tbScenicReviewInfo);
 
-    @Select("select count(*) from tb_scenic_review_info where sid =#{sid}")
+    @Select("select count(*) from tb_scenic_review_info_final where sid =#{sid}")
     int selectCountReview(@Param("sid") String id);
 
 }

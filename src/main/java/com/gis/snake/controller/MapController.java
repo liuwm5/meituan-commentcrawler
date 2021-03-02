@@ -24,7 +24,7 @@ public class MapController {
     MeituanCrawler meituanCrawler;
 
     @RequestMapping("/meituanScenicReviewInfoCrawler1")
-    public void meituanScenicReviewInfoCrawler1(@RequestParam(value = "meituanId", required = true) String meituanId) {
+    public void meituanScenicReviewInfoCrawler1(@RequestParam(value = "meituanId") String meituanId) {
         //先清空ip池
         IPList.clearList();
         //校验id
